@@ -1,0 +1,20 @@
+products:
+  endpoint: "/api/v1/products"
+  file_name: "products"
+  parse_point: ""
+  limit: 50
+  table_name: "stage.products"
+
+carts:
+  endpoint: "/api/v1/carts"
+  file_name: "carts"
+  parse_point: ""
+  limit: 50
+  table_name: "stage.carts"
+
+customers:
+  endpoint: "/api/v1/customer"
+  file_name: "customers"
+  parse_point: ""
+  limit: 50
+  table_name: "stage.customers"
