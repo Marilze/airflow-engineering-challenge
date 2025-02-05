@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, func, JSON
+from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.dialects.postgresql import JSONB
 
@@ -13,6 +14,9 @@ class TbCustomer(Base):
     address = Column(String(255))
     city = Column(String(100))
     created_at = Column(DateTime, default=func.now())
+    
+    # Relacionamento com vendas
+    sales = relationship("TbSales", back_populates="customer")
 
 
 class TbLogistics(Base):
@@ -23,6 +27,9 @@ class TbLogistics(Base):
     contact_phone = Column(String(20))
     origin_warehouse = Column(String(255))
     created_at = Column(DateTime, default=func.now())
+    
+    # Relacionamento com vendas
+    sales = relationship("TbSales", back_populates="logistic")
 
 
 class TbProduct(Base):
@@ -34,7 +41,7 @@ class TbProduct(Base):
     created_at = Column(DateTime, default=func.now())
 
 
-class TbCarts(Base):
+class TbSales(Base):
     __tablename__ = "sales"
     id = Column(Integer, primary_key=True)
     customer_id = Column(Integer)
@@ -46,6 +53,10 @@ class TbCarts(Base):
     shipping_info = Column(JSONB)
     payment_info = Column(JSONB)
     created_at = Column(DateTime, default=func.now())
+    
+     # Relacionamentos
+    customer = relationship("TbCustomer", back_populates="sales")
+    logistic = relationship("TbLogistics", back_populates="sales")
 
 
 class User(Base):
