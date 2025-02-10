@@ -14,11 +14,14 @@ x-airflow-common:
     AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
     AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
     _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
+    PYTHONPATH: /opt/airflow
+    API_URL: "http://api:8000"
   volumes:
     - ${AIRFLOW_PROJ_DIR:-.}/dags:/opt/airflow/dags
     - ${AIRFLOW_PROJ_DIR:-.}/logs:/opt/airflow/logs
     - ${AIRFLOW_PROJ_DIR:-.}/config:/opt/airflow/config
     - ${AIRFLOW_PROJ_DIR:-.}/plugins:/opt/airflow/plugins
+    - ${AIRFLOW_PROJ_DIR:-.}/api:/opt/airflow/api
     - ${AIRFLOW_PROJ_DIR:-.}/local_storage:/opt/airflow/local_storage
   user: "${AIRFLOW_UID:-50000}:0"
   depends_on:
@@ -44,7 +47,8 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init-scripts:/docker-entrypoint-initdb.d
-
+    networks:
+      - airflow-network
   api:
     build:
       context: ./api
@@ -65,6 +69,8 @@ services:
     command: >
       bash -c "python seed_data.py &&
                uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
+    networks:
+      - airflow-network
   redis:
     container_name: airflow-redis
     image: redis:7.2-bookworm
@@ -77,6 +83,8 @@ services:
       retries: 50
       start_period: 30s
     restart: always
+    networks:
+      - airflow-network
   
   airflow-webserver:
     container_name: airflow-webserver
@@ -89,6 +97,8 @@ services:
       airflow webserver"
     ports:
       - "8080:8080"
+    extra_hosts:
+      - "api:host-gateway"
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
       interval: 30s
@@ -100,6 +110,9 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
+    networks:
+      - airflow-network
+      
   airflow-scheduler:
     container_name: airflow-scheduler
     <<: *airflow-common
@@ -109,6 +122,8 @@ services:
       pip install airflow-dbt &&
       pip install storage_tool &&
       airflow scheduler"
+    extra_hosts:
+      - "api:host-gateway"
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8974/health"]
       interval: 30s
@@ -120,6 +135,8 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
+    networks:
+      - airflow-network
   airflow-worker:
     container_name: airflow-worker
     <<: *airflow-common
@@ -129,6 +146,8 @@ services:
       pip install airflow-dbt &&
       pip install storage_tool &&
       airflow celery worker"
+    extra_hosts:
+      - "api:host-gateway"
     healthcheck:
       test:
         - "CMD-SHELL"
@@ -145,6 +164,9 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
+    networks:
+      - airflow-network
+
   airflow-triggerer:
     container_name: airflow-triggerer
     <<: *airflow-common
@@ -223,6 +245,12 @@ services:
     user: "0:0"
     volumes:
       - ${AIRFLOW_PROJ_DIR:-.}:/sources
+    networks:
+      - airflow-network
 
 volumes:
   postgres_data:
+
+networks:
+  airflow-network:
+    driver: bridge

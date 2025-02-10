@@ -10,8 +10,10 @@ import random
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
 
+
 app = FastAPI(title="Fake API", version="1.0.0")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -20,6 +22,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # Middleware para simular erros 500 aleatórios
 @app.middleware("http")
@@ -36,10 +39,13 @@ async def simulate_random_errors(request: Request, call_next):
                 }
             )
     response = await call_next(request)
+
     return response
+
 
 # Criar as tabelas
 models.Base.metadata.create_all(bind=database.engine)
+
 
 # Endpoints de autenticação
 @app.post("/token")
@@ -62,6 +68,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
         "refresh_token": refresh_token,
         "token_type": "bearer"
     }
+
 
 @app.post("/refresh-token")
 async def refresh_token(token: str = Depends(oauth2_scheme)):
@@ -88,6 +95,20 @@ async def refresh_token(token: str = Depends(oauth2_scheme)):
     
     return {"access_token": new_access_token, "token_type": "bearer"}
 
+
+# Endpoints da API
+@app.get("/api/v1/products")
+async def get_products(
+    skip: int = 0,
+    limit: int = 50,
+    db: Session = Depends(database.get_db),
+    current_user: str = Depends(auth.get_current_user)
+):
+    products = db.query(models.TbProduct).offset(skip).limit(min(limit, 50)).all()
+
+    return products
+
+
 @app.get("/api/v1/carts")
 async def get_carts(
     skip: int = 0,
@@ -95,14 +116,10 @@ async def get_carts(
     db: Session = Depends(database.get_db),
     current_user: str = Depends(auth.get_current_user)
 ):
-    try:
-        carts = db.query(models.TbCarts).offset(skip).limit(min(limit, 50)).all()
-        return carts
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail="Database error: unable to retrieve products"
-        )
+    carts = db.query(models.TbCarts).offset(skip).limit(min(limit, 50)).all()
+
+    return carts
+
 
 @app.get("/api/v1/customer")
 async def get_customers(
@@ -111,14 +128,10 @@ async def get_customers(
     db: Session = Depends(database.get_db),
     current_user: str = Depends(auth.get_current_user)
 ):
-    try:
-        customers = db.query(models.TbCustomer).offset(skip).limit(min(limit, 50)).all()
-        return customers
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail="Database error: unable to retrieve custumers"
-        )
+    customers = db.query(models.TbCustomer).offset(skip).limit(min(limit, 50)).all()
+
+    return customers
+
 
 @app.get("/api/v1/logistict")
 async def get_logistics(
@@ -127,11 +140,6 @@ async def get_logistics(
     db: Session = Depends(database.get_db),
     current_user: str = Depends(auth.get_current_user)
 ):
-    try:
-        logistics = db.query(models.TbLogistics).offset(skip).limit(min(limit, 50)).all()
-        return logistics
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail="Database error: unable to retrieve logistics"
-        )
+    logistics = db.query(models.TbLogistics).offset(skip).limit(min(limit, 50)).all()
+
+    return logistics
